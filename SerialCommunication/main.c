@@ -30,7 +30,7 @@ int main()
 	printf("write_buffer returned code: %d\n \n", write_string_status);
 
 	/*
-	* EXAMPLE B: WRITE TEXT  FILE TO SERIAL
+	* EXAMPLE B: WRITE TEXT FILE TO SERIAL
 	* 
 	* In this example, the contents of an ASCII text file will be written to the serial port
 	*/

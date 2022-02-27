@@ -122,6 +122,7 @@ int initialize_serial(wchar_t* com_port)
 	dcb.BaudRate = 9600;	// Baud rate
 	dcb.Parity = NOPARITY;			// No parity
 	dcb.StopBits = ONESTOPBIT;		// One stop bit
+	dcb.ByteSize = 8;
 
 	// May not be necessary and varies from system to system
 	dcb.XonChar = 0x0D;
