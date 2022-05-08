@@ -54,6 +54,6 @@ int main()
 | ``closeSerialListenThread`` | **void** | Closes the thread listening for incoming serial data. |
 
 ## Limitations
-The asynchronous listening functionality is not truly asynchronous. In this version of the *SerialInterface*, read and write operations block each meaning only one can run at any instance of time. Usually this is not an issue. However, if large buffers are written to serial all at once, the read operations will be blocked for extended periods of time. The reverse is true having large incoming buffers and slow callback functions will delay write operations to serial. 
+The asynchronous listening functionality is not truly asynchronous. In this version of the *SerialInterface*, read and write operations block each meaning only one can run at any instance of time. Usually this is not an issue. However, if large buffers are written to serial all at once, the read operations will be blocked for extended periods of time. The reverse is also true, having large incoming buffers and slow callback functions will delay write operations to serial. 
 
-To prevent read/write operations from blockign each other, try to break large buffers into smaller pieces and write those smaller buffers to serial.
+To prevent read/write operations from blocking each other, try to break large buffers up into smaller buffers and write those smaller buffers to serial.
