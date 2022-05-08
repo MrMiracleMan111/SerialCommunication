@@ -53,7 +53,7 @@ int main()
 | ``addSerialListenCallback(void (*callback)(char))`` | **int** | Adds a function to the list of callback functions to be run when a new byte enters the serial stream. The parameter ``callback`` is a pointer to the callback function. Returns **-1** if the program is unable to add the callback function.
 | ``closeSerialListenThread`` | **void** | Closes the thread listening for incoming serial data. |
 
-#Notes
+## Notes
 The asynchronous listening functionality is not truly asynchronous. In this version of the *SerialInterface* write and read operations and write operations block each meaning only one can run at any instance of time. Usually this is not an issue. However, if large buffers are written to serial all at once, the read operations will be blocked for extended periods of time. The reverse is true having large incoming buffers and slow callback functions will delay write operations to serial. 
 
 To prevent read/write operations from blockign each other, try to break large buffers into smaller pieces and write those smaller buffers to serial.
