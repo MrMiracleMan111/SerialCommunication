@@ -1,5 +1,5 @@
 # SerialCommunication
-A USB Serial Communication Interface written for Robert Sturges. Can write messages to a serial buffer and read bytes in serial.
+A USB Serial Communication Interface written for Robert Sturges. This interface system can write messages to a serial buffer and read bytes in serial. The example below will request the user to specify a serial port to write and will write the message "*ABCDEFGHI*" to serial. Whever a byte enters the serial stream, the callback function ``onSerialChar(char data)`` will run and print the new byte to the console.
 
 ```cpp
 #include <stdio.h>
@@ -42,3 +42,13 @@ int main()
 	return 0;
 }
 ```
+
+| Function      |    Return   | Description |
+| ------------- | ----------- | ----------- |
+| ``listSerialPort``   |   **void**        | Prints available serial port options to console.                                                           |
+| ``pomptCOMPort``     |   **wchar_t\***   | Prompts the user to specify a serial port to use and returns the value the user inputted as a ``wchar_t*`` |
+| ``initialize_serial (wchar_t* com_port`` | **int** | Initializes the serial port for read and write operations. Returns **-1** if the initialization failed. |
+| ``write_buffer (char* lpBuf, DWORD dwToWrite)`` | **int** | Writes a character buffer ``lpBuf`` to the serial port that was previosuly initialized. The length of the character buffer ``lpBuf`` should be passed in to parameter ``dwToWrite``. Returns **-1** if the write oepration failed. |
+| ``int write_ascii_file (char* ascii_file_name)`` | **int** | Writes the contents of a text file located to serial stream. The location of the text filed is passed in through parameter ``ascii_file_name``. The function returns **-1** if the write operation fails. |
+| ``int addSerialListenCallback(void (*callback)(char))`` | **int** | Adds a function to the list of callback functions to be run when a new byte enters the serial stream. The parameter ``callback`` is a pointer to the callback function. Returns **-1** if the program is unable to add the callback function.
+| ``closeSerialListenThread`` | **void** | Closes the thread listening for incoming serial data. |
