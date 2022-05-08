@@ -24,19 +24,20 @@ int main()
 
 	initialize_serial(com_port); // Setup the serial interface
 	
-  	// Example, writing string to serial
-	int write_string_status = write_buffer("ABCDEFGHI", strlen("ABCDEFGHI") + 1);	// Write string to COM serial
-	printf("write_buffer returned code: %d\n \n", write_string_status);		// Print write operation status
+	int write_string_status = write_buffer("ABCDEFGHI", strlen("ABCDEFGHI") + 1);	// Write to serial
+	printf("write_buffer returned code: %d\n \n", write_string_status);		// Print write status
   
   
-	addSerialListenCallback(onSerialChar);  	// Add the "onSerialChar" function declared above to the list of serial callbacks
+	addSerialListenCallback(onSerialChar);  	// Add the "onSerialChar" function declared 
+							// above to the list of serial callbacks
 
 	printf("Press Enter to finish...");		// Halt program from finishing
 	char buffer[1];
 	fgets(buffer, 1, stdin);
 
 
-	closeSerialListenThread();			// Close the thread listening for serial data (necessary for cleanup purposes)
+	closeSerialListenThread();			// Close the thread listening for serial data 
+							// (necessary for cleanup purposes)
 	
 	return 0;
 }
