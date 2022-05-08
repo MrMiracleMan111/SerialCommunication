@@ -25,7 +25,7 @@ int main()
 	initialize_serial(com_port); // Setup the serial interface
 	
 	int write_string_status = write_buffer("ABCDEFGHI", strlen("ABCDEFGHI") + 1);	// Write to serial
-	printf("write_buffer returned code: %d\n \n", write_string_status);		// Print write status
+	printf("write_buffer returned code: %d\n \n", write_string_status);		// Print status
   
   
 	addSerialListenCallback(onSerialChar);  	// Add the "onSerialChar" function declared 
