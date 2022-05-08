@@ -1,5 +1,5 @@
 # Serial Communication Interface
-A USB Serial Communication Interface written for Robert Sturges. This interface system can write messages to a serial buffer and read bytes in serial. The example below will request the user to specify a serial port to write and will write the message "*ABCDEFGHI*" to serial. Whever a byte enters the serial stream, the callback function ``onSerialChar(char data)`` will run and print the new byte to the console.
+A USB Serial Communication Interface written for Robert Sturges. This interface system can write messages to a serial buffer and read bytes in serial. The example below will request the user to specify a serial port to write and will write the message "*ABCDEFGHI*" to serial. Whenever a byte enters the serial stream, the callback function ``onSerialChar(char data)`` will run and print the new byte to the console.
 
 ```cpp
 #include <stdio.h>
