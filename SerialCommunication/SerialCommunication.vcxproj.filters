@@ -28,5 +28,11 @@
     <ClInclude Include="SerialInterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CallbackLinkedList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MutexHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

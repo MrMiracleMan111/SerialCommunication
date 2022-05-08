@@ -4,10 +4,14 @@
 #include <windows.h>
 #include <strsafe.h>
 #include <wchar.h>
-
+#include <process.h>
+#include "MutexHelper.h"
+#include "CallbackLinkedList.h"
 #ifndef SERIAL_INTERFACE
 #define SERIAL_INTERFACE
 
+// 04/26/2022
+// 6hr
 
 #define SERIAL_SEND_BUF_SIZE 20
 /*
@@ -46,8 +50,20 @@ wchar_t* charToWchar(const char* str)
 	return wStr;
 }
 
+// Communication channels for serial
 
+// Synchronous write and read channel
 HANDLE hComm;
+
+COMMTIMEOUTS timeouts; // Set timeouts for the port
+
+CallbackLinkedList callbackList;
+
+// Prevents multiple threads from modifying linked list at same time
+HANDLE linkedListMutex;
+
+// Handle for the listen thread
+HANDLE listenThreadHandle = NULL;
 
 /// <summary>
 /// Writes to a buffer
@@ -62,7 +78,6 @@ int write_buffer(char* lpBuf, DWORD dwToWrite)
 {
 	OVERLAPPED osWrite = { 0 };
 	DWORD dwWritten;
-	DWORD dwRes;
 	int fRes;
 
 	fRes = WriteFile(hComm,	// Event handler
@@ -87,12 +102,12 @@ int write_buffer(char* lpBuf, DWORD dwToWrite)
 /// <returns>Returns 1 if the the operation was a success and 0 if not</returns>
 int initialize_serial(wchar_t* com_port)
 {
-	printf("\nInitializing Port: ");
+	printf("\nSync Initializing Port: ");
 	wprintf(com_port);
 	printf("\n");
 
 	printf("\n");
-	printf("Port File Name: ");
+	printf("Sync Port File Name: ");
 	wprintf(com_port);
 	printf("\n");
 
@@ -100,7 +115,7 @@ int initialize_serial(wchar_t* com_port)
 	wcscat_s(portBase, 20, com_port);
 
 	hComm = CreateFileW(portBase,
-		GENERIC_WRITE,
+		GENERIC_WRITE | GENERIC_READ,
 		0,				// do not share
 		NULL,			// default secutiry 
 		OPEN_EXISTING,	// opens existing file
@@ -125,6 +140,7 @@ int initialize_serial(wchar_t* com_port)
 	dcb.ByteSize = 8;
 
 	// May not be necessary and varies from system to system
+	dcb.fInX = FALSE;
 	dcb.XonChar = 0x0D;
 	dcb.XoffChar = 0x0B;
 
@@ -138,7 +154,22 @@ int initialize_serial(wchar_t* com_port)
 		dcb.BaudRate,
 		dcb.Parity,
 		dcb.StopBits);
-	return 1;
+	
+
+	// Setup the serial port timeouts
+	timeouts.ReadIntervalTimeout = MAXDWORD;
+	timeouts.ReadTotalTimeoutMultiplier = 0;
+	timeouts.ReadTotalTimeoutConstant = 0;
+	timeouts.WriteTotalTimeoutMultiplier = 10;
+	timeouts.WriteTotalTimeoutConstant = 100;
+
+
+	if (!SetCommTimeouts(hComm, &timeouts))
+	{
+		printf("Error setting timeouts for the serial port");
+	}
+
+	return initialize_async_serial(com_port);
 }
 
 ///<summary>
@@ -180,6 +211,142 @@ int write_ascii_file(wchar_t* com_port, char* ascii_file_name)
 	}
 	fclose(file_to_read);	// Close the file
 	return write_buffer(data_to_send, SERIAL_SEND_BUF_SIZE);
+}
+
+
+/// <summary>
+/// Adds a callback function to a queue of callbacks that will be run when data enters the serial stream
+/// 
+/// <param name="callback">The function to run when data enters serial</param>
+/// <return>Returns status of operation (true if success, false if not)</return>
+/// </summary>
+BOOL addSerialListenCallback(void (*callback)(char))
+{
+	CallbackFuncNode* node = malloc(sizeof(CallbackFuncNode));
+	node->callback = callback;
+	node->prevNode = NULL;
+	node->nextNode = NULL;
+	pushCallbackNode(&callbackList, node, &linkedListMutex);
+
+	return TRUE;
+}
+
+
+// Function that will listen for serial data in a separate thread
+// heavily based on code from:
+// https://docs.microsoft.com/en-us/previous-versions/ms810467(v=msdn.10)?redirectedfrom=MSDN
+
+/// <summary>
+/// The "asynchronous" function that will run in the background listening for serial data
+/// </summary>
+/// <param name="args"> A pointer to arguements to pass into this multithread function </param>
+
+void listen_serial(void* args)
+{
+	DWORD bytesRead;			// Nubmer of bytes read
+	DWORD dwCommEvent;			// Event mask returned from "WaitCommEvent" will be stored here
+	char readChar;				// The new byte will be stored in here
+
+	HANDLE readFile = (HANDLE)args; // Not really necessary but makes things easier to understand
+	BOOL fWaitingOnStat = FALSE;	// Waiting on status poll from serial port
+
+	DWORD dwEventFlags = EV_RXCHAR; // New character event for serial
+
+	// Apply event filter flags to the serial port
+	BOOL setCommStatus = SetCommMask(readFile, dwEventFlags);
+
+	// Attempt to apply event flags to serial port
+	// (only listen for those events)
+	if (!setCommStatus)
+	{
+		// Something went wrong applying event 
+		printf("Something went wrong appling Event Flags for serial port");
+		return;
+	}
+
+	for ( ; ; )
+	{
+		// Wait for a new character event on the serial port
+		if (WaitCommEvent(readFile, &dwCommEvent, NULL))
+		{
+			// Prevent memory shenanigans with the callback linked list
+			// which is accessed by both the main thread and the listen thread
+			waitForMutext(&linkedListMutex);
+			__try
+			{
+				do
+				{
+					if (ReadFile(readFile, &readChar, 1, &bytesRead, NULL))
+					{
+						// Run all callback functions
+								// and pass in current byte
+						CallbackFuncNode* node = callbackList.firstNode;
+						while (node != NULL)
+						{
+							node->callback(readChar);
+							node = node->nextNode;
+						}
+					}
+					else
+					{
+						// An error occured in ReadFile operation
+						// abort
+						printf("Error: Something went wrong in listen thread with ReadFile operation\n");
+						break;
+					}
+				} while (bytesRead > 0); // Read all bytes in buffer
+			}
+			__finally
+			{
+				ReleaseMutex(linkedListMutex);
+			}
+		}
+		else
+		{
+			if (ERROR_IO_PENDING == GetLastError())
+			{
+				printf("I/O is pending (WaitCommEvent)...\n");
+			}
+			// Error in WaitCommEvent
+			// abort
+			printf("Error: Something went wrong in listen thread with WaitCommEvent\n");
+			break;
+		}
+	}
+}
+
+/// <summary>
+/// Closes the thread listening for serial data
+/// </summary>
+void closeSerialListenThread()
+{
+	_endthread(listenThreadHandle);
+}
+
+/// <summary>
+/// Sets up serial listening thread and mutex protection for the callback linked lists
+/// </summary>
+/// <param name="com_port">The name of the port to initialize async for</param>
+/// <return>Returns TRUE if successful and FALSE if not</return>
+BOOL initialize_async_serial(wchar_t* com_port)
+{
+	// Create mutex for linked list
+	linkedListMutex = (HANDLE)(CreateMutexA(NULL, FALSE, TEXT("LinkedListMutext")));
+
+	// Begin the serial listen thread
+	uintptr_t threadStatus = (_beginthread(listen_serial, 0, (void*)hComm));
+
+	if (threadStatus == -1)
+	{
+		// Error starting the thread
+		return FALSE;
+	}
+	else
+	{
+		// Save the handle so that the thread can be ended later
+		listenThreadHandle = (HANDLE)threadStatus;
+		return TRUE;
+	}
 }
 
 /// <summary>
@@ -243,6 +410,6 @@ wchar_t* promptCOMPort()
 	return com_port;
 }
 
-#endif // !SERIAL_INTERFACE
+#endif
 
-// © 2022 Jackson Medina Mr.MiracleMan111@gmail.com
+// ï¿½ 2022 Jackson Medina Mr.MiracleMan111@gmail.com
