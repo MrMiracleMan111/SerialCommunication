@@ -176,10 +176,9 @@ int initialize_serial(wchar_t* com_port)
 /// Connects to a USB port
 /// and write serial data to that port from an ASCII file.
 /// </summary>
-/// <param name="com_port">The name of the usb port</param>
 /// <param name="ascii_file_name">The ascii file name</param>
 /// <returns>Returns 1 if operation was a success and 0 if writing failed.</returns>
-int write_ascii_file(wchar_t* com_port, char* ascii_file_name)
+int write_ascii_file(char* ascii_file_name)
 {
 	FILE* file_to_read;
 	fopen_s(&file_to_read, ascii_file_name, "r");
@@ -220,7 +219,7 @@ int write_ascii_file(wchar_t* com_port, char* ascii_file_name)
 /// <param name="callback">The function to run when data enters serial</param>
 /// <return>Returns status of operation (true if success, false if not)</return>
 /// </summary>
-BOOL addSerialListenCallback(void (*callback)(char))
+int addSerialListenCallback(void (*callback)(char))
 {
 	CallbackFuncNode* node = malloc(sizeof(CallbackFuncNode));
 	node->callback = callback;
@@ -228,7 +227,7 @@ BOOL addSerialListenCallback(void (*callback)(char))
 	node->nextNode = NULL;
 	pushCallbackNode(&callbackList, node, &linkedListMutex);
 
-	return TRUE;
+	return 1;
 }
 
 

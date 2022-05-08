@@ -49,7 +49,7 @@ int main()
 	* 
 	* In this example, the contents of an ASCII text file will be written to the serial port
 	*/
-	int return_code = write_ascii_file(com_port, "ASCII.txt");			// Writes all data in text file to serial	
+	int return_code = write_ascii_file("ASCII.txt");			// Writes all data in text file to serial	
 	printf("write_ascii_file returned code: %d\n \n", return_code);
 
 	/*
