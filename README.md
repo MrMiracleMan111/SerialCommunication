@@ -46,7 +46,7 @@ int main()
 | Function      |    Return Value  | Description |
 | ------------- | ----------- | ----------- |
 | ``listSerialPorts``   |   **void**        | Prints available serial port options to console.                                                           |
-| ``pomptCOMPort``     |   **wchar_t\***   | Prompts the user to specify a serial port to use and returns the value the user inputted as a ``wchar_t*``. |
+| ``pomptCOMPort``     |   **wchar_t\***   | Prompts the user to specify a serial port to use and returns the value the user inputted as a ``wchar_t*`` (ex. "``COM7``". |
 | ``initialize_serial (wchar_t* com_port`` | **int** | Initializes the serial port for read and write operations. Returns **-1** if the initialization failed. |
 | ``write_buffer (char* lpBuf, DWORD dwToWrite)`` | **int** | Writes a character buffer ``lpBuf`` to the serial port that was previosuly initialized. The length of the character buffer ``lpBuf`` should be passed in to parameter ``dwToWrite``. Returns **-1** if the write oepration failed. |
 | ``write_ascii_file (char* ascii_file_name)`` | **int** | Writes the contents of a text file located to serial stream. The location of the text filed is passed in through parameter ``ascii_file_name``. The function returns **-1** if the write operation fails. |
