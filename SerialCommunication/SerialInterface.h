@@ -66,6 +66,14 @@ HANDLE linkedListMutex;
 HANDLE listenThreadHandle = NULL;
 
 /// <summary>
+/// Closes the thread listening for serial data
+/// </summary>
+void closeSerialListenThread()
+{
+	CloseHandle(listenThreadHandle);
+}
+
+/// <summary>
 /// Writes to a buffer
 /// 
 /// DWORD is an unsigned long
@@ -92,6 +100,33 @@ int write_buffer(char* lpBuf, DWORD dwToWrite)
 	}
 
 	return fRes;
+}
+
+
+/// <summary>
+/// Sets up serial listening thread and mutex protection for the callback linked lists
+/// </summary>
+/// <param name="com_port">The name of the port to initialize async for</param>
+/// <return>Returns TRUE if successful and FALSE if not</return>
+BOOL initialize_async_serial(wchar_t* com_port)
+{
+	// Create mutex for linked list
+	linkedListMutex = (HANDLE)(CreateMutexA(NULL, FALSE, NULL));
+
+	// Begin the serial listen thread
+	uintptr_t threadStatus = (_beginthread(listen_serial, 0, (void*)hComm));
+
+	if (threadStatus == -1)
+	{
+		// Error starting the thread
+		return FALSE;
+	}
+	else
+	{
+		// Save the handle so that the thread can be ended later
+		listenThreadHandle = (HANDLE)threadStatus;
+		return TRUE;
+	}
 }
 
 /// <summary>
@@ -311,40 +346,6 @@ void listen_serial(void* args)
 			printf("Error: Something went wrong in listen thread with WaitCommEvent\n");
 			break;
 		}
-	}
-}
-
-/// <summary>
-/// Closes the thread listening for serial data
-/// </summary>
-void closeSerialListenThread()
-{
-	_endthread(listenThreadHandle);
-}
-
-/// <summary>
-/// Sets up serial listening thread and mutex protection for the callback linked lists
-/// </summary>
-/// <param name="com_port">The name of the port to initialize async for</param>
-/// <return>Returns TRUE if successful and FALSE if not</return>
-BOOL initialize_async_serial(wchar_t* com_port)
-{
-	// Create mutex for linked list
-	linkedListMutex = (HANDLE)(CreateMutexA(NULL, FALSE, TEXT("LinkedListMutext")));
-
-	// Begin the serial listen thread
-	uintptr_t threadStatus = (_beginthread(listen_serial, 0, (void*)hComm));
-
-	if (threadStatus == -1)
-	{
-		// Error starting the thread
-		return FALSE;
-	}
-	else
-	{
-		// Save the handle so that the thread can be ended later
-		listenThreadHandle = (HANDLE)threadStatus;
-		return TRUE;
 	}
 }
 
