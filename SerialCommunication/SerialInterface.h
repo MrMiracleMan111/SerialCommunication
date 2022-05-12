@@ -256,7 +256,7 @@ int write_ascii_file(char* ascii_file_name)
 /// </summary>
 int addSerialListenCallback(void (*callback)(char))
 {
-	CallbackFuncNode* node = malloc(sizeof(CallbackFuncNode));
+	CallbackFuncNode* node = (CallbackFuncNode*)(malloc(sizeof(CallbackFuncNode)));
 	node->callback = callback;
 	node->prevNode = NULL;
 	node->nextNode = NULL;
