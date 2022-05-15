@@ -23,5 +23,6 @@ BOOL waitForMutext(HANDLE* mutex)
 		printf("Mutex was abandoned");
 		return FALSE;
 	}
+	return FALSE;
 }
 #endif // !MUTEX_HELPER

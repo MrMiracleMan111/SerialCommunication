@@ -102,6 +102,89 @@ int write_buffer(char* lpBuf, DWORD dwToWrite)
 	return fRes;
 }
 
+// Function that will listen for serial data in a separate thread
+// heavily based on code from:
+// https://docs.microsoft.com/en-us/previous-versions/ms810467(v=msdn.10)?redirectedfrom=MSDN
+
+/// <summary>
+/// The "asynchronous" function that will run in the background listening for serial data
+/// </summary>
+/// <param name="args"> A pointer to arguements to pass into this multithread function </param>
+
+void listen_serial(void* args)
+{
+	DWORD bytesRead;			// Nubmer of bytes read
+	DWORD dwCommEvent;			// Event mask returned from "WaitCommEvent" will be stored here
+	char readChar;				// The new byte will be stored in here
+
+	HANDLE readFile = (HANDLE)args; // Not really necessary but makes things easier to understand
+	BOOL fWaitingOnStat = FALSE;	// Waiting on status poll from serial port
+
+	DWORD dwEventFlags = EV_RXCHAR; // New character event for serial
+
+	// Apply event filter flags to the serial port
+	BOOL setCommStatus = SetCommMask(readFile, dwEventFlags);
+
+	// Attempt to apply event flags to serial port
+	// (only listen for those events)
+	if (!setCommStatus)
+	{
+		// Something went wrong applying event 
+		printf("Something went wrong appling Event Flags for serial port");
+		return;
+	}
+
+	for (; ; )
+	{
+		// Wait for a new character event on the serial port
+		if (WaitCommEvent(readFile, &dwCommEvent, NULL))
+		{
+			// Prevent memory shenanigans with the callback linked list
+			// which is accessed by both the main thread and the listen thread
+			waitForMutext(&linkedListMutex);
+			__try
+			{
+				do
+				{
+					if (ReadFile(readFile, &readChar, 1, &bytesRead, NULL))
+					{
+						// Run all callback functions
+								// and pass in current byte
+						CallbackFuncNode* node = callbackList.firstNode;
+						while (node != NULL)
+						{
+							node->callback(readChar);
+							node = node->nextNode;
+						}
+					}
+					else
+					{
+						// An error occured in ReadFile operation
+						// abort
+						printf("Error: Something went wrong in listen thread with ReadFile operation\n");
+						break;
+					}
+				} while (bytesRead > 0); // Read all bytes in buffer
+			}
+			__finally
+			{
+				ReleaseMutex(linkedListMutex);
+			}
+		}
+		else
+		{
+			if (ERROR_IO_PENDING == GetLastError())
+			{
+				printf("I/O is pending (WaitCommEvent)...\n");
+			}
+			// Error in WaitCommEvent
+			// abort
+			printf("Error: Something went wrong in listen thread with WaitCommEvent\n");
+			break;
+		}
+	}
+}
+
 
 /// <summary>
 /// Sets up serial listening thread and mutex protection for the callback linked lists
@@ -263,90 +346,6 @@ int addSerialListenCallback(void (*callback)(char))
 	pushCallbackNode(&callbackList, node, &linkedListMutex);
 
 	return 1;
-}
-
-
-// Function that will listen for serial data in a separate thread
-// heavily based on code from:
-// https://docs.microsoft.com/en-us/previous-versions/ms810467(v=msdn.10)?redirectedfrom=MSDN
-
-/// <summary>
-/// The "asynchronous" function that will run in the background listening for serial data
-/// </summary>
-/// <param name="args"> A pointer to arguements to pass into this multithread function </param>
-
-void listen_serial(void* args)
-{
-	DWORD bytesRead;			// Nubmer of bytes read
-	DWORD dwCommEvent;			// Event mask returned from "WaitCommEvent" will be stored here
-	char readChar;				// The new byte will be stored in here
-
-	HANDLE readFile = (HANDLE)args; // Not really necessary but makes things easier to understand
-	BOOL fWaitingOnStat = FALSE;	// Waiting on status poll from serial port
-
-	DWORD dwEventFlags = EV_RXCHAR; // New character event for serial
-
-	// Apply event filter flags to the serial port
-	BOOL setCommStatus = SetCommMask(readFile, dwEventFlags);
-
-	// Attempt to apply event flags to serial port
-	// (only listen for those events)
-	if (!setCommStatus)
-	{
-		// Something went wrong applying event 
-		printf("Something went wrong appling Event Flags for serial port");
-		return;
-	}
-
-	for ( ; ; )
-	{
-		// Wait for a new character event on the serial port
-		if (WaitCommEvent(readFile, &dwCommEvent, NULL))
-		{
-			// Prevent memory shenanigans with the callback linked list
-			// which is accessed by both the main thread and the listen thread
-			waitForMutext(&linkedListMutex);
-			__try
-			{
-				do
-				{
-					if (ReadFile(readFile, &readChar, 1, &bytesRead, NULL))
-					{
-						// Run all callback functions
-								// and pass in current byte
-						CallbackFuncNode* node = callbackList.firstNode;
-						while (node != NULL)
-						{
-							node->callback(readChar);
-							node = node->nextNode;
-						}
-					}
-					else
-					{
-						// An error occured in ReadFile operation
-						// abort
-						printf("Error: Something went wrong in listen thread with ReadFile operation\n");
-						break;
-					}
-				} while (bytesRead > 0); // Read all bytes in buffer
-			}
-			__finally
-			{
-				ReleaseMutex(linkedListMutex);
-			}
-		}
-		else
-		{
-			if (ERROR_IO_PENDING == GetLastError())
-			{
-				printf("I/O is pending (WaitCommEvent)...\n");
-			}
-			// Error in WaitCommEvent
-			// abort
-			printf("Error: Something went wrong in listen thread with WaitCommEvent\n");
-			break;
-		}
-	}
 }
 
 /// <summary>
