@@ -323,6 +323,7 @@ int write_ascii_file(char* ascii_file_name)
 			{
 				return -1;
 			}
+			memset(&data_to_send, 0, 20);
 			count = 0;
 		}
 	}

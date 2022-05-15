@@ -78,8 +78,8 @@ int main()
 
 	// End the program after the users presses the enter key (this just keeps the program running)
 	printf("Press Enter to finish...");
-	char buffer[1];
-	fgets(buffer, 1, stdin);
+	char buffer[10];
+	fgets(buffer, 10, stdin);
 
 	// Close the thread listening for serial data (necessary for cleanup purposes)
 	closeSerialListenThread();
