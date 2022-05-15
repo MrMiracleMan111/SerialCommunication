@@ -136,6 +136,24 @@ void listen_serial(void* args)
 
 	for (; ; )
 	{
+		BOOL readFileStatus = ReadFile(readFile, &readChar, 1, &bytesRead, NULL);
+		if (readFileStatus == TRUE && bytesRead > 0)
+		{
+			if (GetLastError() != ERROR_IO_PENDING)
+			{
+				// Run all callback functions
+						// and pass in current byte
+				CallbackFuncNode* node = callbackList.firstNode;
+				while (node != NULL)
+				{
+					node->callback(readChar);
+					node = node->nextNode;
+				}
+			}
+		}
+		// CODE BELOW IS CURRENTLY NOT-WORKING
+		// IT WILL BE FAR MORE CPU EFFICIENT ONCE WORKING THOUGH
+		/*
 		// Wait for a new character event on the serial port
 		if (WaitCommEvent(readFile, &dwCommEvent, NULL))
 		{
@@ -182,6 +200,7 @@ void listen_serial(void* args)
 			printf("Error: Something went wrong in listen thread with WaitCommEvent\n");
 			break;
 		}
+		*/
 	}
 }
 
@@ -278,8 +297,8 @@ int initialize_serial(wchar_t* com_port)
 	timeouts.ReadIntervalTimeout = MAXDWORD;
 	timeouts.ReadTotalTimeoutMultiplier = 0;
 	timeouts.ReadTotalTimeoutConstant = 0;
-	timeouts.WriteTotalTimeoutMultiplier = 10;
-	timeouts.WriteTotalTimeoutConstant = 100;
+	timeouts.WriteTotalTimeoutMultiplier = 0;
+	timeouts.WriteTotalTimeoutConstant = 0;
 
 
 	if (!SetCommTimeouts(hComm, &timeouts))
@@ -287,7 +306,9 @@ int initialize_serial(wchar_t* com_port)
 		printf("Error setting timeouts for the serial port");
 	}
 
-	return initialize_async_serial(com_port);
+	BOOL async_init_status = initialize_async_serial(com_port);
+	// BOOL async_init_status = TRUE;
+	return async_init_status;
 }
 
 ///<summary>
@@ -373,7 +394,7 @@ void listSerialPorts()
 
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 		{
-			port_path[10000]; // Increase the port_path buffer size if necessary
+			port_path[4999]; // Increase the port_path buffer size if necessary
 			continue;
 		}
 

@@ -67,7 +67,16 @@ BOOL pushCallbackNode(CallbackLinkedList* list, CallbackFuncNode* newNode, HANDL
 	if (list->firstNode == NULL)
 	{
 		list->firstNode = newNode;
-		ReleaseMutex(mutex);
+
+		if (mutex != NULL)
+		{
+			ReleaseMutex(mutex);
+		}
+		else
+		{
+			printf("WARNING: Mutex was null for callback linked list");
+		}
+
 		return TRUE;
 	}
 
